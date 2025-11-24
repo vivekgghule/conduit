@@ -15,3 +15,25 @@ buildNumber.properties
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+# IDE/Editors
+.idea/
+.vscode/
+.settings/
+**/.settings/
+.project
+.classpath
+.factorypath
+**/.project
+**/.classpath
+**/.factorypath
+
+
+# Build artifacts
+target/
+*/target/
+**/target/
+
+# OS
+.DS_Store
+Thumbs.db
