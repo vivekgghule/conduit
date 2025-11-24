@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ========================= -->
+    <!--   PARENT PROJECT INFO     -->
+    <!-- ========================= -->
+    <groupId>com.conduit.egress</groupId>
+    <artifactId>egress-pilot-parent</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <name>Conduit - Parent (v1.0.0)</name>
+    <description>Centralized outbound rate limiter with control-plane + agent architecture</description>
+    <url>https://github.com/zapantu/egress-pilot</url>
+
+    <!-- ========================= -->
+    <!--      PROJECT MODULES      -->
+    <!-- ========================= -->
+    <modules>
+        <module>egress-pilot-core</module>
+        <module>egress-pilot-redis-backend</module>
+        <module>egress-pilot-agent-autoconfigure</module>
+        <module>egress-pilot-agent-starter</module>
+        <module>egress-pilot-control-plane-service</module>
+        <module>egress-pilot-sample-client-service</module>
+        <module>infra</module>
+    </modules>
+
+    <!-- ========================= -->
+    <!--        GLOBAL PROPS       -->
+    <!-- ========================= -->
+    <properties>
+        <java.version>21</java.version>
+        <spring.boot.version>3.3.5</spring.boot.version>
+        <spring.framework.version>6.1.13</spring.framework.version>
+
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Consistent, reproducible builds -->
+        <maven.build.timestamp.format>yyyyMMdd-HHmmss</maven.build.timestamp.format>
+
+        <!-- Plugin versions -->
+        <maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
+        <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
+        <maven.failsafe.plugin.version>3.2.5</maven.failsafe.plugin.version>
+        <spotless.plugin.version>2.43.0</spotless.plugin.version>
+    </properties>
+
+    <!-- ========================= -->
+    <!--   DEPENDENCY MANAGEMENT   -->
+    <!-- ========================= -->
+    <dependencyManagement>
+        <dependencies>
+
+            <!-- Spring Boot BOM -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Resilience4j BOM -->
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-bom</artifactId>
+                <version>2.2.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Micrometer BOM -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-bom</artifactId>
+                <version>1.14.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- OpenTelemetry BOM -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>1.44.1</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- ========================= -->
+    <!--     GLOBAL DEPENDENCIES   -->
+    <!-- ========================= -->
+    <dependencies>
+
+        <!-- Lombok (all modules get it) -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.32</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Jakarta Bean Validation -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+
+        <!-- Reactor Core -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+
+        <!-- Logging (logback via Boot Starter) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
+        </dependency>
+
+        <!-- TESTING -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!-- ========================= -->
+    <!--       BUILD PLUGINS       -->
+    <!-- ========================= -->
+    <build>
+        <pluginManagement>
+            <plugins>
+
+                <!-- Compiler plugin -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven.compiler.plugin.version}</version>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                        <release>${java.version}</release>
+                        <forceJavacCompilerUse>true</forceJavacCompilerUse>
+                    </configuration>
+                </plugin>
+
+                <!-- Surefire (unit tests) -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven.surefire.plugin.version}</version>
+                </plugin>
+
+                <!-- Failsafe (integration tests) -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${maven.failsafe.plugin.version}</version>
+                </plugin>
+
+                <!-- Spotless for formatting -->
+                <plugin>
+                    <groupId>com.diffplug.spotless</groupId>
+                    <artifactId>spotless-maven-plugin</artifactId>
+                    <version>${spotless.plugin.version}</version>
+                </plugin>
+
+                <!-- Spring Boot Repackage -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring.boot.version}</version>
+                </plugin>
+
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>

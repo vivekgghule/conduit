@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: egress-control-plane
+  cloud:
+    vault:
+      enabled: true
+      uri: http://vault:8200
+      authentication: token
+      token: ${VAULT_TOKEN}
+      kv:
+        enabled: true
+        backend: secret
+        default-context: egress-control-plane

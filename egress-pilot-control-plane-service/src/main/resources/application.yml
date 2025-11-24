@@ -1,0 +1,46 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: egress-pilot-control-plane
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
+  datasource:
+    url: jdbc:postgresql://postgres:5432/egresspilot
+    username: ${DB_USERNAME:egresspilot}
+    password: ${DB_PASSWORD:egresspilot}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+egress:
+  controlplane:
+    security:
+      enabled: true
+      api-key: ${EGRESS_CONTROLPLANE_API_KEY:changeme-control-plane-key}

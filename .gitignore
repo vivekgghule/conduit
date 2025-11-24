@@ -1,0 +1,18 @@
+# IDE/Editors
+.idea/
+.vscode/
+.settings/
+**/.settings/
+.project
+.classpath
+**/.project
+**/.classpath
+
+# Build artifacts
+target/
+*/target/
+**/target/
+
+# OS
+.DS_Store
+Thumbs.db

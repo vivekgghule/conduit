@@ -1,0 +1,24 @@
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /workspace
+
+# Install the conduit agent locally so consumer-conduit can resolve it
+COPY pom.xml pom.xml
+COPY egress-pilot-core egress-pilot-core
+COPY egress-pilot-redis-backend egress-pilot-redis-backend
+COPY egress-pilot-agent-autoconfigure egress-pilot-agent-autoconfigure
+COPY egress-pilot-agent-starter egress-pilot-agent-starter
+COPY egress-pilot-control-plane-service egress-pilot-control-plane-service
+COPY egress-pilot-sample-client-service egress-pilot-sample-client-service
+COPY infra infra
+RUN mvn -q -pl egress-pilot-agent-starter -am install -DskipTests
+
+# Build the sample app
+COPY samples/consumer-conduit/pom.xml samples/consumer-conduit/pom.xml
+COPY samples/consumer-conduit/src samples/consumer-conduit/src
+RUN mvn -f samples/consumer-conduit/pom.xml -q package -DskipTests
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /workspace/samples/consumer-conduit/target/consumer-conduit-*.jar app.jar
+EXPOSE 8083
+ENTRYPOINT ["java","-jar","/app/app.jar"]

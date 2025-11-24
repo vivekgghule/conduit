@@ -1,0 +1,23 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: egress-pilot-sample-client
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+conduit:
+  egress:
+    agent:
+      enabled: true
+      control-plane-base-url: http://localhost:8090
+      control-plane-api-key: ${EGRESS_CONTROLPLANE_API_KEY:changeme-control-plane-key}
+      service-name: sample-client
+      backend: in-memory
+      refresh-interval-seconds: 10
+      fail-open: true

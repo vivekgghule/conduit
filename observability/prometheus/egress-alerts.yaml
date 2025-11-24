@@ -1,0 +1,42 @@
+groups:
+  - name: egress-control-plane-alerts
+    interval: 30s
+    rules:
+      - alert: EgressControlPlaneHigh5xxRate
+        expr: rate(http_server_requests_seconds_count{job="egress-control-plane", status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate on Egress Control Plane"
+          description: "5xx rate is above 0.1 rps for more than 5 minutes."
+
+      - alert: EgressControlPlaneUnhealthy
+        expr: up{job="egress-control-plane"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Egress Control Plane is down"
+          description: "The control-plane instance is not responding to Prometheus scrapes."
+
+  - name: egress-agent-alerts
+    interval: 30s
+    rules:
+      - alert: EgressAgentRuleRefreshFailures
+        expr: rate(conduit_egress_agent_rule_refresh_error_total[5m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Egress agents failing to refresh rules"
+          description: "Rule refresh from control-plane is failing. Check control-plane health or network."
+
+      - alert: EgressAgentBackendErrors
+        expr: rate(conduit_egress_agent_backend_error_total[5m]) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Egress agent backend errors"
+          description: "Egress agent is experiencing errors when calling Redis or local backend."

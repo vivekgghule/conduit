@@ -1,0 +1,28 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: consumer-conduit
+
+producer:
+  base-url: ${PRODUCER_BASE_URL:http://producer:8081/api}
+
+conduit:
+  egress:
+    agent:
+      control-plane-base-url: ${CONDUIT_EGRESS_AGENT_CONTROL_PLANE_BASE_URL:http://control-plane:8090}
+      control-plane-api-key: ${EGRESS_CONTROLPLANE_API_KEY:changeme-control-plane-key}
+      service-name: ${CONDUIT_EGRESS_AGENT_SERVICE_NAME:consumer-conduit}
+      backend: ${CONDUIT_EGRESS_AGENT_BACKEND:redis}
+      redis-uri: ${CONDUIT_EGRESS_AGENT_REDIS_URI:redis://redis:6379}
+      fail-open: false
+      behavior-on-exhaustion: QUEUE
+      queue:
+        max-size: 1000
+        max-wait-ms: 15000
+        backoff-ms: 1000
+
+logging:
+  level:
+    com.conduit.egress.agent: DEBUG

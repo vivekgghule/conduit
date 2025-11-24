@@ -1,0 +1,119 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: sample-postgres
+    environment:
+      POSTGRES_DB: egresspilot
+      POSTGRES_USER: egresspilot
+      POSTGRES_PASSWORD: egresspilot
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U egresspilot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: sample-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+
+  control-plane:
+    build:
+      context: ..
+      dockerfile: infra/control-plane/Dockerfile
+    container_name: sample-control-plane
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_USERNAME: egresspilot
+      DB_PASSWORD: egresspilot
+      SERVER_PORT: 8090
+      SERVER_SSL_ENABLED: "false"
+      SPRING_CLOUD_VAULT_ENABLED: "false"
+      EGRESS_CONTROLPLANE_API_KEY: "changeme-control-plane-key"
+    ports:
+      - "8090:8090"
+
+  producer:
+    build:
+      context: ..
+      dockerfile: samples/Dockerfile.producer
+    container_name: producer
+    depends_on:
+      control-plane:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+
+  consumer-plain:
+    build:
+      context: ..
+      dockerfile: samples/Dockerfile.consumer-plain
+    container_name: consumer-plain
+    depends_on:
+      producer:
+        condition: service_started
+    environment:
+      PRODUCER_BASE_URL: http://producer:8081/api
+    ports:
+      - "8082:8082"
+
+  consumer-conduit:
+    build:
+      context: ..
+      dockerfile: samples/Dockerfile.consumer-conduit
+    container_name: consumer-conduit
+    depends_on:
+      redis:
+        condition: service_started
+      control-plane:
+        condition: service_started
+      producer:
+        condition: service_started
+    environment:
+      PRODUCER_BASE_URL: http://producer:8081/api
+      CONDUIT_EGRESS_AGENT_CONTROL_PLANE_BASE_URL: http://control-plane:8090
+      EGRESS_CONTROLPLANE_API_KEY: "changeme-control-plane-key"
+      CONDUIT_EGRESS_AGENT_SERVICE_NAME: consumer-conduit
+      CONDUIT_EGRESS_AGENT_BACKEND: redis
+      CONDUIT_EGRESS_AGENT_REDIS_URI: redis://redis:6379
+    ports:
+      - "8083:8083"
+
+  seed-rules:
+    image: curlimages/curl:8.10.1
+    container_name: seed-rules
+    depends_on:
+      control-plane:
+        condition: service_started
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until curl -sf http://control-plane:8090/actuator/health; do echo 'waiting for control-plane'; sleep 2; done
+
+        # producer: slightly higher allowance to demonstrate pacing
+        curl -sf -X POST http://control-plane:8090/api/v1/rules \
+          -H 'X-API-KEY: changeme-control-plane-key' \
+          -H 'Content-Type: application/json' \
+          -d '{
+                "serviceName": "consumer-conduit",
+                "name": "producer-api",
+                "hostPatterns": ["producer"],
+                "pathPatterns": ["/api/hello", "/api/hello/*", "/api/create", "/api/path/*/details"],
+                "httpMethod": "ANY",
+                "capacity": 3,
+                "refillTokens": 3,
+                "refillPeriodSeconds": 1,
+                "dimensions": ["HOST", "PATH"]
+              }'
+
+        echo 'rules seeded'
+        tail -f /dev/null

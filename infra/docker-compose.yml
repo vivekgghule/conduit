@@ -1,0 +1,57 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    container_name: egress-postgres
+    environment:
+      POSTGRES_DB: egresspilot
+      POSTGRES_USER: egresspilot
+      POSTGRES_PASSWORD: egresspilot
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U egresspilot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: egress-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+
+  control-plane:
+    build:
+      context: ..
+      dockerfile: infra/control-plane/Dockerfile
+    container_name: egress-control-plane
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_USERNAME: egresspilot
+      DB_PASSWORD: egresspilot
+      SERVER_PORT: 8090
+      SERVER_SSL_ENABLED: "false"
+      SPRING_CLOUD_VAULT_ENABLED: "false"
+      EGRESS_CONTROLPLANE_API_KEY: "changeme-control-plane-key"
+    ports:
+      - "8090:8090"
+
+  sample-client:
+    build:
+      context: ..
+      dockerfile: infra/sample-client/Dockerfile
+    container_name: egress-sample-client
+    depends_on:
+      control-plane:
+        condition: service_started
+    environment:
+      CONDUIT_EGRESS_AGENT_CONTROL_PLANE_BASE_URL: http://control-plane:8090
+      EGRESS_CONTROLPLANE_API_KEY: "changeme-control-plane-key"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "8081:8081"

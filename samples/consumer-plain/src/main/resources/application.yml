@@ -1,0 +1,9 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: consumer-plain
+
+producer:
+  base-url: ${PRODUCER_BASE_URL:http://producer:8081/api}

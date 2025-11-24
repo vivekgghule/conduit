@@ -1,0 +1,45 @@
+{
+  "title": "Egress Pilot - Agent",
+  "uid": "egress-agent",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Allowed Calls / s",
+      "id": 1,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "rate(conduit_egress_agent_allowed_total[1m])",
+          "legendFormat": "allowed/s",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Denied Calls / s",
+      "id": 2,
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "rate(conduit_egress_agent_denied_total[1m])",
+          "legendFormat": "denied/s",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
