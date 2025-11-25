@@ -9,8 +9,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -134,6 +138,108 @@ class RateLimitRuleControllerTests {
                         .param("sort", "nonexistent,asc"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Unsupported sort property")));
+    }
+
+    @Test
+    void updateRuleNotFoundReturns404() throws Exception {
+        String json = """
+                {
+                  "serviceName": "sample-client",
+                  "name": "missing",
+                  "hostPatterns": ["example.com"],
+                  "pathPatterns": ["/"],
+                  "capacity": 10,
+                  "refillTokens": 1,
+                  "refillPeriodSeconds": 1
+                }
+                """;
+        mockMvc.perform(put("/api/v1/rules/{id}", 123)
+                        .header("X-API-KEY", "changeme-control-plane-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateRuleConflictReturns409() throws Exception {
+        RateLimitRuleEntity existing = repository.save(buildRule("sample-client", "first"));
+        RateLimitRuleEntity second = repository.save(buildRule("sample-client", "second"));
+
+        String updateJson = """
+                {
+                  "serviceName": "sample-client",
+                  "name": "first",
+                  "hostPatterns": ["example.com"],
+                  "pathPatterns": ["/"],
+                  "capacity": 10,
+                  "refillTokens": 1,
+                  "refillPeriodSeconds": 1
+                }
+                """;
+
+        mockMvc.perform(put("/api/v1/rules/{id}", second.getId())
+                        .header("X-API-KEY", "changeme-control-plane-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void deleteRuleReturnsProperCodes() throws Exception {
+        RateLimitRuleEntity saved = repository.save(buildRule("sample-client", "to-delete"));
+
+        mockMvc.perform(delete("/api/v1/rules/{id}", saved.getId())
+                        .header("X-API-KEY", "changeme-control-plane-key"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(delete("/api/v1/rules/{id}", saved.getId())
+                        .header("X-API-KEY", "changeme-control-plane-key"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void bulkImportCreatesAndReportsErrors() throws Exception {
+        repository.save(buildRule("sample-client", "existing"));
+
+        String payload = """
+                [
+                  {
+                    "serviceName": "sample-client",
+                    "name": "new-rule",
+                    "hostPatterns": ["example.com"],
+                    "pathPatterns": ["/"],
+                    "capacity": 10,
+                    "refillTokens": 1,
+                    "refillPeriodSeconds": 1
+                  },
+                  {
+                    "serviceName": "sample-client",
+                    "name": "existing",
+                    "hostPatterns": ["example.com"],
+                    "pathPatterns": ["/"],
+                    "capacity": 10,
+                    "refillTokens": 1,
+                    "refillPeriodSeconds": 1
+                  }
+                ]
+                """;
+        MockMultipartFile file = new MockMultipartFile("file", "rules.json", "application/json", payload.getBytes());
+
+        mockMvc.perform(multipart("/api/v1/rules/bulk")
+                        .file(file)
+                        .header("X-API-KEY", "changeme-control-plane-key"))
+                .andExpect(status().isMultiStatus())
+                .andExpect(jsonPath("$.created.length()").value(1))
+                .andExpect(jsonPath("$.errors.length()").value(1));
+    }
+
+    @Test
+    void bulkImportRejectsEmptyFile() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "rules.json", "application/json", new byte[0]);
+        mockMvc.perform(multipart("/api/v1/rules/bulk")
+                        .file(file)
+                        .header("X-API-KEY", "changeme-control-plane-key"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
