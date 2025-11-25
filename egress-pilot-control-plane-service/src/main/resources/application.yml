@@ -1,9 +1,12 @@
 server:
   port: 8090
+  shutdown: graceful
 
 spring:
   application:
     name: egress-pilot-control-plane
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
