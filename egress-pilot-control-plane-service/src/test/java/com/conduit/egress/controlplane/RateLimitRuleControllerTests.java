@@ -72,7 +72,9 @@ class RateLimitRuleControllerTests {
                         .param("service", " ")
                         .param("page", "-1")
                         .param("size", "0"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").exists());
     }
 
     @Test
@@ -80,7 +82,8 @@ class RateLimitRuleControllerTests {
         mockMvc.perform(get("/api/v1/rules")
                         .header("X-API-KEY", "changeme-control-plane-key")
                         .param("service", "sample-client' OR '1'='1"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Bad Request"));
     }
 
     @Test
@@ -129,7 +132,8 @@ class RateLimitRuleControllerTests {
                         .header("X-API-KEY", "changeme-control-plane-key")
                         .param("service", "sample-client")
                         .param("sort", "nonexistent,asc"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Unsupported sort property")));
     }
 
     @Test
