@@ -76,6 +76,34 @@ class RateLimitRuleControllerTests {
     }
 
     @Test
+    void rejectsSqlInjectionInServiceParam() throws Exception {
+        mockMvc.perform(get("/api/v1/rules")
+                        .header("X-API-KEY", "changeme-control-plane-key")
+                        .param("service", "sample-client' OR '1'='1"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createRuleRejectsSqlInjectionInIdentifiers() throws Exception {
+        String json = """
+                {
+                  "serviceName": "sample-client'; drop table users; --",
+                  "name": "github-api",
+                  "hostPatterns": ["api.github.com"],
+                  "pathPatterns": ["/rate_limit"],
+                  "capacity": 60,
+                  "refillTokens": 60,
+                  "refillPeriodSeconds": 60
+                }
+                """;
+        mockMvc.perform(post("/api/v1/rules")
+                        .header("X-API-KEY", "changeme-control-plane-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void listRulesSupportsPaginationAndSorting() throws Exception {
         repository.save(buildRule("sample-client", "b-rule"));
         repository.save(buildRule("sample-client", "a-rule"));

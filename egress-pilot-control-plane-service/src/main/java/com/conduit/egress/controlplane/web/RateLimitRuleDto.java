@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
 
 import java.util.List;
 
@@ -13,9 +14,11 @@ public class RateLimitRuleDto {
     private Long id;
 
     @NotBlank
+    @Pattern(regexp = "^[A-Za-z0-9_.-]+$", message = "must use letters, numbers, dots, dashes, or underscores")
     private String serviceName;
 
     @NotBlank
+    @Pattern(regexp = "^[A-Za-z0-9_.-]+$", message = "must use letters, numbers, dots, dashes, or underscores")
     private String name;
 
     @JsonAlias("hostPattern")
@@ -28,6 +31,7 @@ public class RateLimitRuleDto {
     @NotEmpty
     private List<@NotBlank String> pathPatterns;
 
+    @Pattern(regexp = "^[A-Z]+$", message = "must be uppercase HTTP method when provided")
     private String httpMethod;
 
     @Min(1)
@@ -39,7 +43,7 @@ public class RateLimitRuleDto {
     @Min(1)
     private long refillPeriodSeconds;
 
-    private List<String> dimensions;
+    private List<@Pattern(regexp = "^[A-Za-z0-9_.-]+$", message = "must use letters, numbers, dots, dashes, or underscores") String> dimensions;
 
     public Long getId() {
         return id;

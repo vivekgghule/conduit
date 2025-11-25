@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -70,7 +71,7 @@ public class RateLimitRuleController {
 
     @GetMapping
     public PagedResponse<RateLimitRuleDto> list(
-            @RequestParam("service") @NotBlank String serviceName,
+            @RequestParam("service") @NotBlank @Pattern(regexp = "^[A-Za-z0-9_.-]+$") String serviceName,
             @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
             @RequestParam(name = "size", defaultValue = "" + DEFAULT_PAGE_SIZE) @Min(1) @Max(MAX_PAGE_SIZE) int size,
             @RequestParam(name = "sort", required = false) List<String> sort
