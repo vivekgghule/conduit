@@ -39,6 +39,18 @@ management:
       prometheus:
         enabled: true
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      rule-store:
+        sliding-window-type: count_based
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+
 egress:
   controlplane:
     security:

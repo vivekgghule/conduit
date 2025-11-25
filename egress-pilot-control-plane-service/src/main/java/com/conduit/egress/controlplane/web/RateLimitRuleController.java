@@ -1,7 +1,7 @@
 package com.conduit.egress.controlplane.web;
 
 import com.conduit.egress.controlplane.model.RateLimitRuleEntity;
-import com.conduit.egress.controlplane.repo.RateLimitRuleRepository;
+import com.conduit.egress.controlplane.service.RateLimitRuleService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 @Validated
 public class RateLimitRuleController {
 
-    private final RateLimitRuleRepository repository;
+    private final RateLimitRuleService service;
     private final MeterRegistry meterRegistry;
     private final ObjectMapper objectMapper;
     private final Validator validator;
@@ -58,12 +58,12 @@ public class RateLimitRuleController {
     private static final int MAX_PAGE_SIZE = 200;
 
     public RateLimitRuleController(
-            RateLimitRuleRepository repository,
+            RateLimitRuleService service,
             MeterRegistry meterRegistry,
             ObjectMapper objectMapper,
             Validator validator
     ) {
-        this.repository = repository;
+        this.service = service;
         this.meterRegistry = meterRegistry;
         this.objectMapper = objectMapper;
         this.validator = validator;
@@ -78,7 +78,7 @@ public class RateLimitRuleController {
     ) {
         meterRegistry.counter("control_plane.rule.list").increment();
         Pageable pageable = createPageRequest(page, size, sort);
-        Page<RateLimitRuleEntity> results = repository.findByServiceName(serviceName, pageable);
+        Page<RateLimitRuleEntity> results = service.findByServiceName(serviceName, pageable);
         return toPagedResponse(results);
     }
 
@@ -90,18 +90,18 @@ public class RateLimitRuleController {
     ) {
         meterRegistry.counter("control_plane.rule.list_all").increment();
         Pageable pageable = createPageRequest(page, size, sort);
-        Page<RateLimitRuleEntity> results = repository.findAll(pageable);
+        Page<RateLimitRuleEntity> results = service.findAll(pageable);
         return toPagedResponse(results);
     }
 
     @PostMapping
     public ResponseEntity<RateLimitRuleDto> create(@Valid @RequestBody RateLimitRuleDto dto) {
-        if (repository.existsByServiceNameAndName(dto.getServiceName(), dto.getName())) {
+        if (service.existsByServiceNameAndName(dto.getServiceName(), dto.getName())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
         RateLimitRuleEntity entity = RateLimitRuleMapper.toEntity(dto);
         try {
-            RateLimitRuleEntity saved = repository.save(entity);
+            RateLimitRuleEntity saved = service.save(entity);
             RateLimitRuleDto body = RateLimitRuleMapper.toDto(saved);
             meterRegistry.counter("control_plane.rule.create").increment();
             return ResponseEntity.created(URI.create("/api/v1/rules/" + saved.getId()))
@@ -116,16 +116,16 @@ public class RateLimitRuleController {
             @PathVariable("id") @Positive Long id,
             @Valid @RequestBody RateLimitRuleDto dto
     ) {
-        return repository.findById(id)
+        return service.findById(id)
                 .map(existing -> {
-                    return repository.findByServiceNameAndName(dto.getServiceName(), dto.getName())
+                    return service.findByServiceNameAndName(dto.getServiceName(), dto.getName())
                             .filter(conflict -> !conflict.getId().equals(id))
                             .map(conflict -> ResponseEntity.status(HttpStatus.CONFLICT).<RateLimitRuleDto>build())
                             .orElseGet(() -> {
                                 RateLimitRuleEntity updated = RateLimitRuleMapper.toEntity(dto);
                                 updated.setId(id);
                                 try {
-                                    RateLimitRuleEntity saved = repository.save(updated);
+                                    RateLimitRuleEntity saved = service.save(updated);
                                     meterRegistry.counter("control_plane.rule.update").increment();
                                     return ResponseEntity.ok(RateLimitRuleMapper.toDto(saved));
                                 } catch (DataIntegrityViolationException ex) {
@@ -138,10 +138,10 @@ public class RateLimitRuleController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable("id") @Positive Long id) {
-        if (!repository.existsById(id)) {
+        if (!service.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
-        repository.deleteById(id);
+        service.deleteById(id);
         meterRegistry.counter("control_plane.rule.delete").increment();
         return ResponseEntity.noContent().build();
     }
@@ -175,12 +175,12 @@ public class RateLimitRuleController {
                     errors.add("Validation failed for " + describeRule(dto) + ": " + String.join("; ", validationErrors));
                     continue;
                 }
-                if (repository.existsByServiceNameAndName(dto.getServiceName(), dto.getName())) {
+                if (service.existsByServiceNameAndName(dto.getServiceName(), dto.getName())) {
                     errors.add("Duplicate rule for service=" + dto.getServiceName() + " name=" + dto.getName());
                     continue;
                 }
                 try {
-                    RateLimitRuleEntity saved = repository.save(RateLimitRuleMapper.toEntity(dto));
+                    RateLimitRuleEntity saved = service.save(RateLimitRuleMapper.toEntity(dto));
                     created.add(RateLimitRuleMapper.toDto(saved));
                 } catch (DataIntegrityViolationException ex) {
                     errors.add("Constraint violation for service=" + dto.getServiceName() + " name=" + dto.getName());
