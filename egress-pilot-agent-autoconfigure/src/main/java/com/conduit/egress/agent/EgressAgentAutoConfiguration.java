@@ -11,7 +11,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
@@ -20,6 +22,8 @@ import org.springframework.boot.web.reactive.function.client.WebClientCustomizer
 
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 @AutoConfiguration
 @EnableConfigurationProperties(EgressAgentProperties.class)
@@ -45,7 +49,18 @@ public class EgressAgentAutoConfiguration {
             String password = uri.getUserInfo().split(":", 2)[1];
             cfg.setPassword(password);
         }
-        LettuceConnectionFactory factory = new LettuceConnectionFactory(cfg);
+        GenericObjectPoolConfig<?> poolConfig = new GenericObjectPoolConfig<>();
+        poolConfig.setMaxTotal(properties.getRedisPool().getMaxTotal());
+        poolConfig.setMaxIdle(properties.getRedisPool().getMaxIdle());
+        poolConfig.setMinIdle(properties.getRedisPool().getMinIdle());
+        poolConfig.setMaxWait(Duration.ofMillis(properties.getRedisPool().getMaxWaitMs()));
+
+        LettuceClientConfiguration clientConfig = LettucePoolingClientConfiguration.builder()
+                .commandTimeout(Duration.ofSeconds(5))
+                .poolConfig(poolConfig)
+                .build();
+
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(cfg, clientConfig);
         factory.afterPropertiesSet();
         return new StringRedisTemplate(factory);
     }
