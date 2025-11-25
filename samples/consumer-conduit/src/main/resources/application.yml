@@ -20,7 +20,7 @@ conduit:
       behavior-on-exhaustion: QUEUE
       queue:
         max-size: 1000
-        max-wait-ms: 15000
+        max-wait-ms: 500
         backoff-ms: 1000
 
 logging:

@@ -65,7 +65,7 @@ public class WebClientRateLimiterFilter implements ExchangeFilterFunction {
         EgressAgentProperties.BehaviorOnExhaustion behavior = properties.getBehaviorOnExhaustion();
         switch (behavior) {
             case QUEUE:
-                return applyQueueBehavior(request, next, cfg, key);
+                return applyQueueBehavior(request, next, cfg, key, 0);
             case SMOOTH_FLOW:
                 return applySmoothFlowBehavior(request, next, cfg, key);
             case BLOCK:
@@ -97,15 +97,18 @@ public class WebClientRateLimiterFilter implements ExchangeFilterFunction {
     private Mono<ClientResponse> applyQueueBehavior(ClientRequest request,
                                                     ExchangeFunction next,
                                                     RateLimitConfig cfg,
-                                                    RateLimitKey key) {
+                                                    RateLimitKey key,
+                                                    int attempt) {
         long backoffMs = properties.getQueue().getBackoffMs();
         long maxWaitMs = properties.getQueue().getMaxWaitMs();
+        long maxAttempts = Math.max(1, maxWaitMs / Math.max(1, backoffMs)) + 1;
         Instant enqueueTime = clock.instant();
 
         return Mono.defer(() -> {
             long waited = Duration.between(enqueueTime, clock.instant()).toMillis();
-            if (waited > maxWaitMs) {
+            if (waited > maxWaitMs || attempt >= maxAttempts) {
                 meterRegistry.counter("conduit.egress.agent.queue.dropped").increment();
+                meterRegistry.counter("conduit.egress.agent.denied").increment();
                 return Mono.error(new RateLimitExceededException(
                         key,
                         "Queued request expired while waiting for capacity",
@@ -127,7 +130,7 @@ public class WebClientRateLimiterFilter implements ExchangeFilterFunction {
 
             meterRegistry.counter("conduit.egress.agent.queued").increment();
             return Mono.delay(Duration.ofMillis(delay))
-                    .then(applyQueueBehavior(request, next, cfg, key));
+                    .then(applyQueueBehavior(request, next, cfg, key, attempt + 1));
         });
     }
 
