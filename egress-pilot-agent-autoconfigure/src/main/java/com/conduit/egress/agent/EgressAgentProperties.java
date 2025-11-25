@@ -46,6 +46,12 @@ public class EgressAgentProperties {
     private String redisUri = "redis://localhost:6379";
 
     /**
+     * Redis connection pool settings used when backend=redis/dragonfly.
+     */
+    @Valid
+    private PoolProperties redisPool = new PoolProperties();
+
+    /**
      * Interval in seconds between rule refreshes from control-plane.
      */
     @Min(5)
@@ -126,6 +132,52 @@ public class EgressAgentProperties {
 
         public void setIntervalMs(long intervalMs) {
             this.intervalMs = intervalMs;
+        }
+    }
+
+    public static class PoolProperties {
+        @Min(1)
+        private int maxTotal = 8;
+
+        @Min(0)
+        private int maxIdle = 8;
+
+        @Min(0)
+        private int minIdle = 0;
+
+        @Min(0)
+        private long maxWaitMs = 2000;
+
+        public int getMaxTotal() {
+            return maxTotal;
+        }
+
+        public void setMaxTotal(int maxTotal) {
+            this.maxTotal = maxTotal;
+        }
+
+        public int getMaxIdle() {
+            return maxIdle;
+        }
+
+        public void setMaxIdle(int maxIdle) {
+            this.maxIdle = maxIdle;
+        }
+
+        public int getMinIdle() {
+            return minIdle;
+        }
+
+        public void setMinIdle(int minIdle) {
+            this.minIdle = minIdle;
+        }
+
+        public long getMaxWaitMs() {
+            return maxWaitMs;
+        }
+
+        public void setMaxWaitMs(long maxWaitMs) {
+            this.maxWaitMs = maxWaitMs;
         }
     }
 
@@ -215,5 +267,13 @@ public class EgressAgentProperties {
 
     public void setRedisUri(String redisUri) {
         this.redisUri = redisUri;
+    }
+
+    public PoolProperties getRedisPool() {
+        return redisPool;
+    }
+
+    public void setRedisPool(PoolProperties redisPool) {
+        this.redisPool = redisPool;
     }
 }
