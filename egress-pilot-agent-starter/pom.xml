@@ -5,7 +5,7 @@
   <parent>
     <groupId>com.conduit.egress</groupId>
     <artifactId>egress-pilot-parent</artifactId>
-    <version>1</version>
+    <version>1.0.1</version>
   </parent>
     <artifactId>egress-pilot-agent-starter</artifactId>
     <dependencies>
